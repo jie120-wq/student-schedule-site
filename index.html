@@ -105,6 +105,35 @@
     .reminder { background:#f8f9ff; border-left:4px solid var(--primary); padding:12px; border-radius:9px; margin-bottom:10px; }
     .reminder strong { display:block; }
     .reminder small { color:#777; }
+    .budget-section { margin:28px 0; scroll-margin-top:20px; }
+    .budget-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-bottom:18px; }
+    .budget-stat { border:1px solid var(--line); background:#fff; border-radius:14px; padding:16px; }
+    .budget-stat span { display:block; color:var(--muted); font-size:14px; }
+    .budget-stat strong { display:block; margin-top:5px; font-size:24px; overflow-wrap:anywhere; }
+    .budget-income { color:#14845c; }
+    .budget-expense { color:#d75d5d; }
+    .budget-balance { color:var(--primary); }
+    .budget-form { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; align-items:end; }
+    .budget-form .form-group { margin:0; min-width:0; }
+    .budget-form .form-group input, .budget-form .form-group select { width:100%; min-width:0; padding:11px; border:1px solid #dfe3ee; border-radius:9px; font:inherit; }
+    .budget-form .budget-note { grid-column:span 3; }
+    .budget-form button { min-height:44px; }
+    .budget-transactions { display:grid; gap:10px; margin-top:14px; }
+    .budget-entry { display:flex; justify-content:space-between; align-items:center; gap:14px; background:#fbfcff; border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
+    .budget-entry-main { min-width:0; }
+    .budget-entry-title { display:block; overflow-wrap:anywhere; }
+    .budget-entry-meta { color:var(--muted); font-size:12px; }
+    .budget-entry-actions { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+    .budget-entry-amount { white-space:nowrap; font-weight:700; }
+    .budget-entry-amount.income { color:#14845c; }
+    .budget-entry-amount.expense { color:#d75d5d; }
+    .budget-entry-actions button { padding:7px 10px; }
+    .budget-toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    .budget-filters { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    .budget-filters label { display:flex; align-items:center; gap:6px; color:var(--muted); font-size:14px; }
+    .budget-filters input, .budget-filters select { max-width:180px; padding:8px; border:1px solid var(--line); border-radius:8px; background:white; color:var(--ink); font:inherit; }
+    .budget-categories { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+    .budget-category { background:#f5f6fb; border-radius:999px; padding:7px 12px; font-size:13px; }
     .empty { color:#999; text-align:center; }
     .modal { display:none; position:fixed; inset:0; background:rgba(24,31,50,0.48); z-index:1000; align-items:center; justify-content:center; padding:16px; }
     .modal.active { display:flex; }
@@ -182,6 +211,18 @@
       .weekly-mood-day .day-name, .weekly-mood-day .day-mood { font-size:10px; }
       .weekly-mood-day .day-cloud { font-size:23px; }
       .today { display:none; }
+      .budget-summary { grid-template-columns:1fr; gap:8px; }
+      .budget-stat { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 14px; }
+      .budget-stat strong { font-size:19px; margin-top:0; text-align:right; }
+      .budget-form { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .budget-form .budget-note { grid-column:span 2; }
+      .budget-form button { grid-column:span 2; }
+      .budget-entry { align-items:flex-start; flex-direction:column; gap:8px; }
+      .budget-entry-actions { width:100%; justify-content:space-between; }
+      .budget-toolbar { align-items:flex-start; flex-direction:column; }
+      .budget-filters { width:100%; }
+      .budget-filters label { flex:1; justify-content:space-between; }
+      .budget-filters input, .budget-filters select { max-width:none; }
     }
   </style>
 </head>
@@ -195,6 +236,7 @@
     <nav class="main-nav" aria-label="主要導覽">
       <a href="#schedule">📅 課表</a>
       <a href="#reminders">📝 待辦提醒</a>
+      <a href="#budget">💰 記帳</a>
       <a href="#life">☁️ 生活紀錄</a>
       <button id="installButton" class="install-button" type="button" hidden>⬇️ 安裝 App</button>
     </nav>
@@ -269,6 +311,68 @@
         </div>
       </div>
     </div>
+
+    <section class="budget-section" id="budget" aria-labelledby="budgetTitle">
+      <div class="card">
+        <div class="card-title">
+          <div>
+            <h2 id="budgetTitle">💰 我的記帳本</h2>
+            <p class="small-note">記錄日常收支，掌握每月財務狀況。資料只儲存在這個瀏覽器。</p>
+          </div>
+          <label for="budgetMonth">統計月份
+            <input id="budgetMonth" type="month" />
+          </label>
+        </div>
+        <div class="budget-summary" aria-live="polite">
+          <div class="budget-stat"><span>本月收入</span><strong id="budgetIncome" class="budget-income">$0</strong></div>
+          <div class="budget-stat"><span>本月支出</span><strong id="budgetExpense" class="budget-expense">$0</strong></div>
+          <div class="budget-stat"><span>本月結餘</span><strong id="budgetBalance" class="budget-balance">$0</strong></div>
+        </div>
+        <h3>新增一筆收支</h3>
+        <form id="budgetForm" class="budget-form">
+          <div class="form-group">
+            <label for="transactionType">收支類型</label>
+            <select id="transactionType" required>
+              <option value="expense">支出</option>
+              <option value="income">收入</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="transactionCategory">分類</label>
+            <select id="transactionCategory" required></select>
+          </div>
+          <div class="form-group">
+            <label for="transactionAmount">金額（新臺幣）</label>
+            <input id="transactionAmount" type="number" min="1" step="1" inputmode="numeric" placeholder="例如：120" required />
+          </div>
+          <div class="form-group">
+            <label for="transactionDate">日期</label>
+            <input id="transactionDate" type="date" required />
+          </div>
+          <div class="form-group budget-note">
+            <label for="transactionNote">備註（選填）</label>
+            <input id="transactionNote" type="text" maxlength="80" placeholder="例如：午餐、家教薪水" />
+          </div>
+          <button class="primary" type="submit">＋ 新增紀錄</button>
+        </form>
+      </div>
+      <div class="card">
+        <div class="budget-toolbar">
+          <h3>收支明細</h3>
+          <div class="budget-filters">
+            <label for="transactionFilter">顯示
+              <select id="transactionFilter">
+                <option value="all">全部收支</option>
+                <option value="expense">支出</option>
+                <option value="income">收入</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <div id="budgetCategorySummary" class="budget-categories" aria-label="本月支出分類統計"></div>
+        <div id="budgetTransactions" class="budget-transactions" aria-live="polite"></div>
+      </div>
+    </section>
 
     <section class="life-tools" id="life">
       <div class="life-grid">
@@ -451,7 +555,8 @@
       reminders: 'studentReminders',
       diary: 'studentDiaryEntries',
       mood: 'studentMoodEntries',
-      theme: 'studentThemePhoto'
+      theme: 'studentThemePhoto',
+      transactions: 'studentBudgetTransactions'
     };
 
     const safeArrayFromStorage = (key) => {
@@ -469,6 +574,7 @@
     let reminders = safeArrayFromStorage(STORAGE_KEYS.reminders);
     let diaryEntries = safeArrayFromStorage(STORAGE_KEYS.diary);
     let moodEntries = safeArrayFromStorage(STORAGE_KEYS.mood);
+    let transactions = safeArrayFromStorage(STORAGE_KEYS.transactions);
     let editingCourseId = null;
     let selectedMood = '';
     let pendingDiaryPhoto = '';
@@ -481,6 +587,15 @@
       5: ['13:10', '14:00'], 6: ['14:10', '15:00'], 7: ['15:10', '16:00'], 8: ['16:10', '17:00'],
       9: ['17:10', '18:00'], 10: ['18:20', '19:10'], 11: ['19:15', '20:05'], 12: ['20:10', '21:00'], 13: ['21:05', '21:55']
     };
+    const transactionCategories = {
+      expense: ['餐飲', '交通', '住宿', '購物', '娛樂', '學習', '醫療', '其他'],
+      income: ['薪資', '獎學金', '家人給予', '兼職', '其他']
+    };
+    const currencyFormatter = new Intl.NumberFormat('zh-TW', {
+      style: 'currency',
+      currency: 'TWD',
+      maximumFractionDigits: 0
+    });
 
     function localDateString(date = new Date()) {
       const y = date.getFullYear();
@@ -806,6 +921,135 @@
         list.appendChild(div);
       });
       updateNextReminder();
+    }
+
+    function populateTransactionCategories() {
+      const type = document.getElementById('transactionType').value;
+      const categorySelect = document.getElementById('transactionCategory');
+      categorySelect.replaceChildren();
+      transactionCategories[type].forEach(category => {
+        const option = document.createElement('option');
+        option.value = category;
+        option.textContent = category;
+        categorySelect.appendChild(option);
+      });
+    }
+
+    function saveTransaction(event) {
+      event.preventDefault();
+      const type = document.getElementById('transactionType').value;
+      const category = document.getElementById('transactionCategory').value;
+      const amount = Number(document.getElementById('transactionAmount').value);
+      const date = document.getElementById('transactionDate').value;
+      const note = document.getElementById('transactionNote').value.trim();
+      if (!transactionCategories[type]?.includes(category) || !Number.isSafeInteger(amount) || amount <= 0 || !date) {
+        alert('請輸入有效的收支類型、分類、正整數金額與日期。');
+        return;
+      }
+
+      const id = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const transaction = { id, type, category, amount, date, note };
+      const updatedTransactions = [transaction, ...transactions];
+      try {
+        localStorage.setItem(STORAGE_KEYS.transactions, JSON.stringify(updatedTransactions));
+      } catch (error) {
+        alert('記帳儲存失敗，請檢查瀏覽器儲存空間後再試。');
+        return;
+      }
+
+      transactions = updatedTransactions;
+      document.getElementById('transactionAmount').value = '';
+      document.getElementById('transactionNote').value = '';
+      renderBudget();
+    }
+
+    function renderBudget() {
+      const month = document.getElementById('budgetMonth').value;
+      const filter = document.getElementById('transactionFilter').value;
+      const monthTransactions = transactions.filter(transaction => transaction.date.startsWith(month));
+      const income = monthTransactions
+        .filter(transaction => transaction.type === 'income')
+        .reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
+      const expense = monthTransactions
+        .filter(transaction => transaction.type === 'expense')
+        .reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
+      document.getElementById('budgetIncome').textContent = currencyFormatter.format(income);
+      document.getElementById('budgetExpense').textContent = currencyFormatter.format(expense);
+      document.getElementById('budgetBalance').textContent = currencyFormatter.format(income - expense);
+
+      const categorySummary = document.getElementById('budgetCategorySummary');
+      categorySummary.replaceChildren();
+      const expensesByCategory = monthTransactions
+        .filter(transaction => transaction.type === 'expense')
+        .reduce((totals, transaction) => {
+          totals[transaction.category] = (totals[transaction.category] || 0) + Number(transaction.amount || 0);
+          return totals;
+        }, {});
+      Object.entries(expensesByCategory)
+        .sort((a, b) => b[1] - a[1])
+        .forEach(([category, total]) => {
+          const item = document.createElement('span');
+          item.className = 'budget-category';
+          item.textContent = `${category} ${currencyFormatter.format(total)}`;
+          categorySummary.appendChild(item);
+        });
+
+      const list = document.getElementById('budgetTransactions');
+      list.replaceChildren();
+      const visibleTransactions = monthTransactions
+        .filter(transaction => filter === 'all' || transaction.type === filter)
+        .slice()
+        .sort((a, b) => b.date.localeCompare(a.date) || Number(b.id) - Number(a.id));
+      if (!visibleTransactions.length) {
+        const empty = document.createElement('p');
+        empty.className = 'empty';
+        empty.textContent = filter === 'all' ? '這個月還沒有收支紀錄。' : '這個月沒有符合類型的紀錄。';
+        list.appendChild(empty);
+        return;
+      }
+
+      visibleTransactions.forEach(transaction => {
+        const entry = document.createElement('article');
+        entry.className = 'budget-entry';
+
+        const main = document.createElement('div');
+        main.className = 'budget-entry-main';
+        const title = document.createElement('strong');
+        title.className = 'budget-entry-title';
+        title.textContent = transaction.note || transaction.category;
+        const meta = document.createElement('span');
+        meta.className = 'budget-entry-meta';
+        meta.textContent = `${transaction.date} · ${transaction.category}`;
+        main.append(title, document.createElement('br'), meta);
+
+        const actions = document.createElement('div');
+        actions.className = 'budget-entry-actions';
+        const amount = document.createElement('strong');
+        amount.className = `budget-entry-amount ${transaction.type}`;
+        amount.textContent = `${transaction.type === 'income' ? '+' : '−'}${currencyFormatter.format(transaction.amount)}`;
+        const remove = document.createElement('button');
+        remove.className = 'secondary';
+        remove.type = 'button';
+        remove.textContent = '刪除';
+        remove.setAttribute('aria-label', `刪除 ${transaction.date} ${transaction.category} ${currencyFormatter.format(transaction.amount)} 紀錄`);
+        remove.addEventListener('click', () => deleteTransaction(transaction.id));
+        actions.append(amount, remove);
+
+        entry.append(main, actions);
+        list.appendChild(entry);
+      });
+    }
+
+    function deleteTransaction(id) {
+      const updatedTransactions = transactions.filter(transaction => transaction.id !== id);
+      try {
+        localStorage.setItem(STORAGE_KEYS.transactions, JSON.stringify(updatedTransactions));
+      } catch (error) {
+        alert('刪除失敗，瀏覽器無法儲存變更，請稍後再試。');
+        return;
+      }
+      transactions = updatedTransactions;
+      renderBudget();
     }
 
     function updateNextReminder() {
@@ -1213,6 +1457,14 @@
       updateCountdown();
       document.getElementById('diaryDate').value = localDateString();
       document.getElementById('reminderDate').min = localDateString();
+      document.getElementById('budgetMonth').value = localDateString().slice(0, 7);
+      document.getElementById('transactionDate').value = localDateString();
+      document.getElementById('transactionType').addEventListener('change', populateTransactionCategories);
+      document.getElementById('budgetForm').addEventListener('submit', saveTransaction);
+      document.getElementById('budgetMonth').addEventListener('change', renderBudget);
+      document.getElementById('transactionFilter').addEventListener('change', renderBudget);
+      populateTransactionCategories();
+      renderBudget();
       renderDiary();
       renderMoodHistory();
       renderWeeklyMood();

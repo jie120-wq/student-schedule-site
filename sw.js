@@ -1,4 +1,4 @@
-const CACHE_NAME = 'student-schedule-v2';
+const CACHE_NAME = 'student-schedule-v3';
 const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './app-icon.svg'];
 
 self.addEventListener('install', event => {
