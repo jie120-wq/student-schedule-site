@@ -1,0 +1,21 @@
+{
+  "id": "./",
+  "name": "大學生課表管理系統",
+  "short_name": "大學課表",
+  "description": "課程、待辦提醒、生活日記與心情紀錄管理工具。",
+  "lang": "zh-TW",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f4f6fb",
+  "theme_color": "#5265dc",
+  "icons": [
+    {
+      "src": "./app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#5265dc" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="我的大學課表" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./app-icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="./app-icon.svg" />
+  <title>大學生課表管理系統</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --primary: #5b65d8;
+      --primary-dark: #4953c7;
+      --ink: #263248;
+      --muted: #748097;
+      --surface: #fff;
+      --line: #e7eaf2;
+      --background: #f4f6fb;
+    }
+    body {
+      margin: 0;
+      font-family: "Microsoft JhengHei", sans-serif;
+      background: var(--background);
+      color: var(--ink);
+      transition: background 0.3s ease;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      background-position: center center;
+      background-size: cover;
+      line-height: 1.5;
+    }
+    .header {
+      background: linear-gradient(120deg, #5265dc, #7854a8);
+      color: white;
+      padding: 24px max(24px, calc((100% - 1420px) / 2));
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 18px;
+    }
+    .header h1 { margin:0; font-size:28px; letter-spacing:.02em; }
+    .header p { margin:6px 0 0; opacity:0.86; }
+    .today { background: rgba(255,255,255,0.16); padding:10px 16px; border-radius:12px; }
+    .main-nav { display:flex; gap:8px; align-items:center; }
+    .main-nav a { color:white; text-decoration:none; padding:9px 13px; border-radius:10px; font-size:14px; transition:background .2s; }
+    .main-nav a:hover, .main-nav a:focus-visible { background:rgba(255,255,255,.18); outline:none; }
+    .install-button { background:rgba(255,255,255,.16); color:white; border:1px solid rgba(255,255,255,.35); white-space:nowrap; }
+    .install-button:hover { background:rgba(255,255,255,.26); }
+    .install-button[hidden] { display:none; }
+    .container { max-width: 1460px; margin: 28px auto; padding: 0 24px; }
+    .welcome { display:flex; justify-content:space-between; align-items:center; gap:18px; margin: 0 0 18px; }
+    .welcome h2 { margin:0; font-size:22px; }
+    .welcome p { color:var(--muted); margin:5px 0 0; }
+    .layout { display:grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 22px; align-items:start; }
+    .layout > div { min-width:0; }
+    .card {
+      background: rgba(255,255,255,0.94);
+      border: 1px solid rgba(231,234,242,0.9);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border-radius:16px;
+      padding:22px;
+      box-shadow:0 8px 26px rgba(31,42,68,0.055);
+      margin-bottom:18px;
+    }
+    .card-title { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:18px; }
+    .card-title h2, .card-title h3 { margin:0; }
+    button {
+      border:none; border-radius:9px; cursor:pointer; font:inherit; font-size:14px; padding:10px 15px; transition:0.2s;
+    }
+    button:hover { transform: translateY(-1px); }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline:3px solid rgba(91,101,216,.25); outline-offset:2px; }
+    .primary { background:var(--primary); color:white; }
+    .primary:hover { background:var(--primary-dark); }
+    .secondary { background:#eef0f7; color:#444; }
+    .danger { background:#ff6b6b; color:white; }
+    .schedule { max-width:100%; overflow-x:auto; }
+    table { width:100%; min-width:900px; border-collapse:separate; border-spacing:0; table-layout:fixed; }
+    th { position:sticky; top:0; z-index:1; background:#f0f2f8; border-bottom:1px solid #e1e5ef; padding:12px 5px; }
+    th:first-child { width:76px; }
+    td { height:76px; border-bottom:1px solid #e9ebf2; border-right:1px solid #e9ebf2; text-align:center; vertical-align:middle; background:rgba(255,255,255,.56); }
+    td:first-child, th:first-child { border-left:1px solid #e9ebf2; }
+    .period { background:#f7f8fb; font-weight:bold; color:#667085; font-size:13px; }
+    .period small { display:block; font-size:10px; font-weight:normal; color:#929bad; }
+    .today-column { background:#fffaf0; }
+    .today-header { background:#ffe59a !important; color:#604b14; }
+    .course { min-height:58px; margin:4px; border-radius:9px; padding:7px; color:white; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s; overflow-wrap:anywhere; }
+    .course:hover { transform:scale(1.03); box-shadow:0 5px 15px rgba(0,0,0,0.18); }
+    .course small { display:block; margin-top:4px; font-weight:normal; }
+    .side { display:flex; flex-direction:column; }
+    .countdown { text-align:center; }
+    .countdown-icon { font-size:40px; }
+    .countdown h3 { margin:8px 0; }
+    .countdown-course { margin:8px 0; font-weight:bold; }
+    .countdown-time { font-size:23px; color:var(--primary); font-weight:bold; }
+    .credit-number { font-size:38px; }
+    .progress { height:12px; background:#eee; border-radius:20px; overflow:hidden; margin:12px 0; }
+    .progress-bar { height:100%; width:0%; background:linear-gradient(90deg, #667eea, #764ba2); transition:0.4s; }
+    .reminder { background:#f8f9ff; border-left:4px solid var(--primary); padding:12px; border-radius:9px; margin-bottom:10px; }
+    .reminder strong { display:block; }
+    .reminder small { color:#777; }
+    .empty { color:#999; text-align:center; }
+    .modal { display:none; position:fixed; inset:0; background:rgba(24,31,50,0.48); z-index:1000; align-items:center; justify-content:center; padding:16px; }
+    .modal.active { display:flex; }
+    .modal-content { width:520px; max-width:92%; max-height:90vh; overflow-y:auto; background:white; border-radius:20px; padding:28px; }
+    .modal-header { display:flex; justify-content:space-between; align-items:center; }
+    .modal-header h2 { margin-top:0; }
+    .close { font-size:28px; color:#888; cursor:pointer; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display:block; margin-bottom:6px; font-weight:bold; }
+    .form-group input, .form-group select, .form-group textarea { width:100%; padding:11px; border:1px solid #ddd; border-radius:9px; font-size:14px; }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    textarea { resize:vertical; }
+    .modal-buttons { display:flex; gap:10px; margin-top:20px; }
+    .life-tools { margin-top:30px; scroll-margin-top:20px; }
+    .life-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:20px; }
+    .life-card {
+      background: rgba(255,255,255,.94);
+      border: 1px solid rgba(231,234,242,0.9);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-radius:16px;
+      padding:22px;
+      box-shadow:0 5px 20px rgba(0,0,0,.06);
+      margin-bottom:20px;
+    }
+    .life-card h2, .life-card h3 { margin-top:0; }
+    .life-card input, .life-card textarea, .life-card select { width:100%; padding:11px; border:1px solid #dfe3ee; border-radius:10px; font: inherit; margin:6px 0 12px; }
+    .life-card textarea { min-height:100px; resize: vertical; }
+    .life-card label { display:block; font-weight:600; margin-top:8px; }
+    .cloud-options { display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:8px; margin:12px 0; }
+    .cloud-choice { background:#f3f6ff; border:2px solid transparent; padding:10px 4px; border-radius:14px; color:#344; display:flex; flex-direction:column; align-items:center; gap:4px; }
+    .cloud-choice .cloud { font-size:28px; line-height:1.2; }
+    .cloud-choice.selected { border-color:#667eea; background:#e9edff; }
+    .diary-list { display:grid; gap:12px; margin-top:18px; }
+    .diary-entry { border:1px solid #e8eaf2; background:#fbfcff; border-radius:14px; padding:14px; }
+    .diary-entry-head { display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:8px; }
+    .diary-entry-text { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.6; }
+    .diary-photo { display:block; max-width:100%; max-height:260px; object-fit:cover; border-radius:12px; margin-top:10px; }
+    .mood-entry { display:flex; align-items:center; gap:12px; border-bottom:1px solid #edf0f5; padding:12px 0; }
+    .mood-cloud { font-size:34px; min-width:42px; text-align:center; }
+    .weekly-mood-card { background: rgba(255,255,255,0.95); border-radius:18px; padding:22px; margin-top:20px; box-shadow:0 5px 20px rgba(0,0,0,0.06); }
+    .weekly-mood-card h3 { margin-top:0; }
+    .weekly-mood-grid { display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:10px; }
+    .weekly-mood-day { background:#f5f7ff; border-radius:14px; padding:12px 4px; text-align:center; min-width:0; }
+    .weekly-mood-day.today { border:2px solid #8b9cf4; background:#eef0ff; }
+    .weekly-mood-day .day-name { font-size:13px; color:#777; }
+    .weekly-mood-day .day-cloud { font-size:30px; margin:10px 0; }
+    .weekly-mood-day .day-mood { font-size:12px; color:#555; overflow-wrap:anywhere; }
+    .weekly-mood-empty { color:#aaa; }
+    .theme-preview { min-height:140px; border-radius:14px; background:linear-gradient(135deg,#e9edff,#f8e9f2); background-size:cover; background-position:center; display:flex; align-items:end; padding:14px; color:#fff; text-shadow:0 1px 5px #333; margin:12px 0; }
+    .small-note { font-size:12px; color:#777; line-height:1.5; }
+    .app-help { margin:18px 0 0; color:var(--muted); font-size:13px; text-align:center; }
+    #schedule, #reminders { scroll-margin-top:20px; }
+    #weekSelect { border:1px solid var(--line); border-radius:9px; padding:9px 10px; background:white; color:var(--ink); font:inherit; }
+    .info-item { padding:9px 0; border-bottom:1px solid #edf0f5; overflow-wrap:anywhere; }
+    .info-item b { display:inline-block; min-width:112px; color:#4f5c73; }
+    @media (max-width: 950px) {
+      .layout { grid-template-columns:minmax(0, 1fr); }
+      .header { padding:20px 24px; }
+      .header h1 { font-size:22px; }
+      .main-nav { order:3; width:100%; overflow-x:auto; }
+      .main-nav a { white-space:nowrap; }
+      .life-grid { grid-template-columns:1fr; }
+      .cloud-options { grid-template-columns:repeat(3, minmax(0,1fr)); }
+    }
+    @media (max-width: 560px) {
+      .header { padding:18px 16px; }
+      .container { margin:20px auto; padding:0 14px; }
+      .welcome { align-items:flex-start; flex-direction:column; }
+      .card, .life-card, .weekly-mood-card { padding:16px; }
+      .card-title { align-items:flex-start; flex-wrap:wrap; }
+      .form-row { grid-template-columns:1fr; gap:0; }
+      .weekly-mood-grid { gap:4px; }
+      .weekly-mood-day { padding:10px 2px; }
+      .weekly-mood-day .day-name, .weekly-mood-day .day-mood { font-size:10px; }
+      .weekly-mood-day .day-cloud { font-size:23px; }
+      .today { display:none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div>
+      <h1>📚 我的大學課表</h1>
+      <p>課程、待辦與生活紀錄，一頁輕鬆管理</p>
+    </div>
+    <div class="today" id="todayText"></div>
+    <nav class="main-nav" aria-label="主要導覽">
+      <a href="#schedule">📅 課表</a>
+      <a href="#reminders">📝 待辦提醒</a>
+      <a href="#life">☁️ 生活紀錄</a>
+      <button id="installButton" class="install-button" type="button" hidden>⬇️ 安裝 App</button>
+    </nav>
+  </header>
+
+  <div class="container">
+    <div class="welcome">
+      <div>
+        <h2>今天也要安排得剛剛好 ✨</h2>
+        <p>快速查看每週課程、重要截止日，並留下一點自己的時間。</p>
+      </div>
+      <button class="primary" onclick="openCourseModal()">＋ 安排新課程</button>
+    </div>
+    <div class="layout">
+      <div>
+        <div class="card" id="schedule">
+          <div class="card-title">
+            <h2>📅 本週課表</h2>
+            <label for="weekSelect">查看第
+              <select id="weekSelect" aria-label="選擇課程週次"></select>
+              週
+            </label>
+          </div>
+          <div class="schedule">
+            <table>
+              <thead>
+                <tr id="dayHeader">
+                  <th>節次</th>
+                  <th data-day="1">星期一</th>
+                  <th data-day="2">星期二</th>
+                  <th data-day="3">星期三</th>
+                  <th data-day="4">星期四</th>
+                  <th data-day="5">星期五</th>
+                  <th data-day="6">星期六</th>
+                  <th data-day="0">星期日</th>
+                </tr>
+              </thead>
+              <tbody id="scheduleBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card" id="reminders">
+          <div class="card-title">
+            <h3>📝 作業 / 考試提醒</h3>
+            <button class="primary" onclick="openReminderModal()">＋ 新增</button>
+          </div>
+          <div id="reminderList"></div>
+        </div>
+      </div>
+
+      <div class="side">
+        <div class="card countdown">
+          <div class="countdown-icon">⏰</div>
+          <h3 id="countdownTitle">今天沒有課程</h3>
+          <div class="countdown-course" id="countdownCourse">-</div>
+          <div class="countdown-time" id="countdownTime">-</div>
+        </div>
+
+        <div class="card">
+          <h3>💰 本學期學分</h3>
+          <div class="credit-number" id="totalCredits">0</div>
+          <p>目前修習學分</p>
+          <div class="progress"><div class="progress-bar" id="creditProgress"></div></div>
+          <p>必修：<span id="requiredCredits">0</span> 選修：<span id="electiveCredits">0</span></p>
+          <p>通識：<span id="generalCredits">0</span></p>
+        </div>
+
+        <div class="card">
+          <h3>📝 下一個重要事項</h3>
+          <div id="nextReminder">尚無提醒</div>
+        </div>
+      </div>
+    </div>
+
+    <section class="life-tools" id="life">
+      <div class="life-grid">
+        <div class="life-card">
+          <h2>📔 我的生活日記</h2>
+          <p class="small-note">記下今天發生的事，也可以放上喜歡的照片。內容會保存在這個瀏覽器中。</p>
+          <label for="diaryDate">日期</label>
+          <input id="diaryDate" type="date" />
+          <label for="diaryText">今天想記錄什麼？</label>
+          <textarea id="diaryText" placeholder="今天發生了什麼有趣、感動或值得記住的事？"></textarea>
+          <label for="diaryPhoto">放一張照片（選填）</label>
+          <input id="diaryPhoto" type="file" accept="image/*" />
+          <p class="small-note">照片會縮小後儲存在瀏覽器；請避免上傳太多大尺寸照片。</p>
+          <button class="primary" onclick="saveDiary()">💾 儲存日記</button>
+          <div id="diaryList" class="diary-list"></div>
+        </div>
+
+        <div>
+          <div class="life-card">
+            <h2>☁️ 今天的心情雲朵</h2>
+            <p>選一朵最像你今天心情的雲吧！</p>
+            <div class="cloud-options" id="cloudOptions">
+              <button class="cloud-choice" data-mood="開心" data-cloud="☀️☁️" onclick="selectMood(this)"><span class="cloud">☀️☁️</span><span>開心</span></button>
+              <button class="cloud-choice" data-mood="平靜" data-cloud="☁️" onclick="selectMood(this)"><span class="cloud">☁️</span><span>平靜</span></button>
+              <button class="cloud-choice" data-mood="疲累" data-cloud="🌥️" onclick="selectMood(this)"><span class="cloud">🌥️</span><span>疲累</span></button>
+              <button class="cloud-choice" data-mood="難過" data-cloud="🌧️" onclick="selectMood(this)"><span class="cloud">🌧️</span><span>難過</span></button>
+              <button class="cloud-choice" data-mood="煩躁" data-cloud="⛈️" onclick="selectMood(this)"><span class="cloud">⛈️</span><span>煩躁</span></button>
+            </div>
+            <label for="moodNote">想對自己說的話（選填）</label>
+            <textarea id="moodNote" placeholder="不用每天都很完美，留一句話給自己也很好。" style="min-height:75px"></textarea>
+            <button class="primary" onclick="saveMood()">☁️ 記錄今天的心情</button>
+            <div id="moodHistory" style="margin-top:14px"></div>
+          </div>
+
+          <div class="life-card">
+            <h2>🖼️ 主題設定</h2>
+            <p>上傳自己喜歡的照片，讓網頁背景變成專屬於你的風格。</p>
+            <label for="themePhoto">選擇主題照片</label>
+            <input id="themePhoto" type="file" accept="image/*" />
+            <div id="themePreview" class="theme-preview"><strong>你的專屬主題預覽</strong></div>
+            <button class="primary" onclick="applyThemePhoto()">套用這張照片</button>
+            <button class="secondary" onclick="resetTheme()">恢復預設背景</button>
+            <p class="small-note">主題照片會儲存在目前瀏覽器中。若清除網站資料或更換裝置，可能需要重新設定。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="weekly-mood-card">
+      <h3>🌈 我的本週心情天氣</h3>
+      <p id="weeklyMoodSummary">每一朵雲，都是這週的你 ☁️</p>
+      <div id="weeklyMoodCalendar" class="weekly-mood-grid"></div>
+    </div>
+    <p class="app-help">手機可從瀏覽器選單「加入主畫面」；電腦可使用網址列的安裝圖示。資料保存在各裝置的瀏覽器中。</p>
+  </div>
+
+  <div class="modal" id="courseModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="courseModalTitle">📚 新增課程</h2>
+        <span class="close" onclick="closeModal('courseModal')">×</span>
+      </div>
+      <div class="form-group">
+        <label>課名</label>
+        <input id="courseName" placeholder="例如：程式設計" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>老師</label>
+          <input id="teacher" placeholder="例如：王老師" />
+        </div>
+        <div class="form-group">
+          <label>教室</label>
+          <input id="classroom" placeholder="例如：B201" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>星期</label>
+          <select id="courseDay">
+            <option value="1">星期一</option>
+            <option value="2">星期二</option>
+            <option value="3">星期三</option>
+            <option value="4">星期四</option>
+            <option value="5">星期五</option>
+            <option value="6">星期六</option>
+            <option value="0">星期日</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>學分</label>
+          <input id="credits" type="number" min="0" value="3" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>開始節次</label>
+          <select id="startPeriod"></select>
+        </div>
+        <div class="form-group">
+          <label>結束節次</label>
+          <select id="endPeriod"></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>開始週</label>
+          <select id="startWeek"></select>
+        </div>
+        <div class="form-group">
+          <label>結束週</label>
+          <select id="endWeek"></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>課程類型</label>
+        <select id="courseType">
+          <option value="required">必修</option>
+          <option value="elective">選修</option>
+          <option value="general">通識</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>備註</label>
+        <textarea id="courseNote" rows="3" placeholder="例如：記得帶筆電"></textarea>
+      </div>
+      <div class="modal-buttons">
+        <button class="primary" onclick="saveCourse()">儲存</button>
+        <button class="secondary" onclick="closeModal('courseModal')">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="courseInfoModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="infoCourseName"></h2>
+        <span class="close" onclick="closeModal('courseInfoModal')">×</span>
+      </div>
+      <div id="courseInfo"></div>
+      <div class="modal-buttons">
+        <button class="primary" id="editCourseButton">✏️ 編輯</button>
+        <button class="danger" id="deleteCourseButton">🗑️ 刪除</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="reminderModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>📝 新增提醒</h2>
+        <span class="close" onclick="closeModal('reminderModal')">×</span>
+      </div>
+      <div class="form-group">
+        <label>名稱</label>
+        <input id="reminderName" placeholder="例如：程式設計作業" />
+      </div>
+      <div class="form-group">
+        <label>日期</label>
+        <input id="reminderDate" type="date" />
+      </div>
+      <div class="form-group">
+        <label>類型</label>
+        <select id="reminderType">
+          <option value="作業">📌 作業</option>
+          <option value="考試">📝 考試</option>
+          <option value="報告">📄 報告</option>
+        </select>
+      </div>
+      <div class="modal-buttons">
+        <button class="primary" onclick="saveReminder()">儲存</button>
+        <button class="secondary" onclick="closeModal('reminderModal')">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEYS = {
+      courses: 'studentCourses',
+      reminders: 'studentReminders',
+      diary: 'studentDiaryEntries',
+      mood: 'studentMoodEntries',
+      theme: 'studentThemePhoto'
+    };
+
+    const safeArrayFromStorage = (key) => {
+      try {
+        const raw = localStorage.getItem(key);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        console.warn(`Failed to read ${key} from localStorage`, error);
+        return [];
+      }
+    };
+
+    let courses = safeArrayFromStorage(STORAGE_KEYS.courses);
+    let reminders = safeArrayFromStorage(STORAGE_KEYS.reminders);
+    let diaryEntries = safeArrayFromStorage(STORAGE_KEYS.diary);
+    let moodEntries = safeArrayFromStorage(STORAGE_KEYS.mood);
+    let editingCourseId = null;
+    let selectedMood = '';
+    let pendingDiaryPhoto = '';
+    let pendingThemePhoto = '';
+    let installPrompt = null;
+
+    const colors = ['#667eea', '#00b894', '#e17055', '#6c5ce7', '#0984e3', '#e84393', '#00cec9', '#fd9644', '#eb3b5a', '#20bf6b'];
+    const periodTimes = {
+      1: ['08:10', '09:00'], 2: ['09:10', '10:00'], 3: ['10:10', '11:00'], 4: ['11:10', '12:00'],
+      5: ['13:10', '14:00'], 6: ['14:10', '15:00'], 7: ['15:10', '16:00'], 8: ['16:10', '17:00'],
+      9: ['17:10', '18:00'], 10: ['18:20', '19:10'], 11: ['19:15', '20:05'], 12: ['20:10', '21:00'], 13: ['21:05', '21:55']
+    };
+
+    function localDateString(date = new Date()) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function createOptions() {
+      const startPeriod = document.getElementById('startPeriod');
+      const endPeriod = document.getElementById('endPeriod');
+      const startWeek = document.getElementById('startWeek');
+      const endWeek = document.getElementById('endWeek');
+      const weekSelect = document.getElementById('weekSelect');
+      for (let i = 1; i <= 13; i++) {
+        startPeriod.innerHTML += `<option value="${i}">第 ${i} 節</option>`;
+        endPeriod.innerHTML += `<option value="${i}">第 ${i} 節</option>`;
+      }
+      for (let i = 1; i <= 18; i++) {
+        startWeek.innerHTML += `<option value="${i}">第 ${i} 週</option>`;
+        endWeek.innerHTML += `<option value="${i}">第 ${i} 週</option>`;
+        weekSelect.innerHTML += `<option value="${i}">${i}</option>`;
+      }
+    }
+
+    function updateToday() {
+      const now = new Date();
+      const week = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+      document.getElementById('todayText').innerText = `${now.getFullYear()} / ${now.getMonth()+1} / ${now.getDate()} ${week[now.getDay()]}`;
+    }
+
+    function getCourseColor(course) {
+      const index = courses.findIndex(c => c.id === course.id);
+      return colors[index >= 0 ? index % colors.length : 0];
+    }
+
+    function renderSchedule() {
+      const body = document.getElementById('scheduleBody');
+      body.innerHTML = '';
+      const selectedWeek = Number(document.getElementById('weekSelect').value || 1);
+      const dayOrder = [1, 2, 3, 4, 5, 6, 0];
+      document.querySelectorAll('#dayHeader th').forEach(th => {
+        th.classList.remove('today-header');
+        if (th.dataset.day !== undefined) {
+          const dayName = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'][Number(th.dataset.day)];
+          th.innerText = dayName;
+        }
+      });
+      const today = new Date().getDay();
+      const todayHeader = document.querySelector(`#dayHeader th[data-day="${today}"]`);
+      if (todayHeader) {
+        todayHeader.classList.add('today-header');
+        todayHeader.innerText += ' ⭐';
+      }
+
+      for (let period = 1; period <= 13; period++) {
+        const row = document.createElement('tr');
+        const periodCell = document.createElement('td');
+        periodCell.className = 'period';
+        periodCell.append(`第 ${period} 節`);
+        const time = document.createElement('small');
+        time.textContent = periodTimes[period].join('–');
+        periodCell.appendChild(time);
+        row.appendChild(periodCell);
+
+        dayOrder.forEach(day => {
+          const cell = document.createElement('td');
+          if (day === today) cell.classList.add('today-column');
+
+          const matchingCourses = courses.filter(course =>
+            Number(course.day) === day &&
+            period >= Number(course.startPeriod) &&
+            period <= Number(course.endPeriod) &&
+            selectedWeek >= Number(course.startWeek || 1) &&
+            selectedWeek <= Number(course.endWeek || 18)
+          );
+          matchingCourses.forEach(course => {
+            const courseDiv = document.createElement('div');
+            courseDiv.className = 'course';
+            courseDiv.style.background = getCourseColor(course);
+            courseDiv.setAttribute('role', 'button');
+            courseDiv.setAttribute('tabindex', '0');
+            courseDiv.setAttribute('aria-label', `${course.name}，${course.classroom || '教室未設定'}`);
+            courseDiv.append(course.name);
+            const classroom = document.createElement('small');
+            classroom.textContent = `📍 ${course.classroom || '未設定'}`;
+            courseDiv.appendChild(classroom);
+            courseDiv.onclick = () => showCourseInfo(course.id);
+            courseDiv.onkeydown = event => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                showCourseInfo(course.id);
+              }
+            };
+            cell.appendChild(courseDiv);
+          });
+          row.appendChild(cell);
+        });
+        body.appendChild(row);
+      }
+    }
+
+    function openCourseModal() {
+      editingCourseId = null;
+      document.getElementById('courseModalTitle').innerText = '📚 新增課程';
+      clearCourseForm();
+      document.getElementById('courseModal').classList.add('active');
+    }
+
+    function clearCourseForm() {
+      document.getElementById('courseName').value = '';
+      document.getElementById('teacher').value = '';
+      document.getElementById('classroom').value = '';
+      document.getElementById('courseDay').value = '1';
+      document.getElementById('credits').value = 3;
+      document.getElementById('startPeriod').value = 1;
+      document.getElementById('endPeriod').value = 2;
+      document.getElementById('startWeek').value = 1;
+      document.getElementById('endWeek').value = 18;
+      document.getElementById('courseType').value = 'required';
+      document.getElementById('courseNote').value = '';
+    }
+
+    function saveCourse() {
+      const name = document.getElementById('courseName').value.trim();
+      if (!name) { alert('請輸入課名！'); return; }
+
+      const start = Number(document.getElementById('startPeriod').value);
+      const end = Number(document.getElementById('endPeriod').value);
+      if (end < start) { alert('結束節次不能早於開始節次！'); return; }
+      const startWeek = Number(document.getElementById('startWeek').value);
+      const endWeek = Number(document.getElementById('endWeek').value);
+      if (endWeek < startWeek) { alert('結束週次不能早於開始週次！'); return; }
+      const day = Number(document.getElementById('courseDay').value);
+      const hasConflict = courses.some(existing =>
+        existing.id !== editingCourseId &&
+        Number(existing.day) === day &&
+        start <= Number(existing.endPeriod) &&
+        end >= Number(existing.startPeriod) &&
+        startWeek <= Number(existing.endWeek || 18) &&
+        endWeek >= Number(existing.startWeek || 1)
+      );
+      if (hasConflict) {
+        alert('這個時段已有課程，請調整節次或上課週次。');
+        return;
+      }
+
+      const course = {
+        id: editingCourseId || Date.now(),
+        name,
+        teacher: document.getElementById('teacher').value,
+        classroom: document.getElementById('classroom').value,
+        day: document.getElementById('courseDay').value,
+        startPeriod: start,
+        endPeriod: end,
+        startWeek,
+        endWeek,
+        credits: Number(document.getElementById('credits').value) || 0,
+        type: document.getElementById('courseType').value,
+        note: document.getElementById('courseNote').value
+      };
+
+      const updatedCourses = editingCourseId
+        ? courses.map(existing => existing.id === editingCourseId ? course : existing)
+        : [...courses, course];
+
+      try {
+        localStorage.setItem(STORAGE_KEYS.courses, JSON.stringify(updatedCourses));
+      } catch (error) {
+        alert('資料儲存失敗，請先刪除部分課程或減少內容。');
+        return;
+      }
+
+      courses = updatedCourses;
+      closeModal('courseModal');
+      renderSchedule();
+      updateCredits();
+      updateCountdown();
+    }
+
+    function showCourseInfo(id) {
+      const course = courses.find(c => c.id === id);
+      if (!course) return;
+      const weekNames = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+      document.getElementById('infoCourseName').textContent = `📚 ${course.name}`;
+      const details = document.getElementById('courseInfo');
+      details.replaceChildren();
+      const periodStart = periodTimes[Number(course.startPeriod)];
+      const periodEnd = periodTimes[Number(course.endPeriod)];
+      [
+        ['💻 課名', course.name],
+        ['👨‍🏫 老師', course.teacher || '未設定'],
+        ['📍 教室', course.classroom || '未設定'],
+        ['🕐 上課時間', `${weekNames[Number(course.day)]} ${periodStart[0]}–${periodEnd[1]}（第 ${course.startPeriod}～${course.endPeriod} 節）`],
+        ['📅 上課週次', `第 ${course.startWeek || 1}～${course.endWeek || 18} 週`],
+        ['💰 學分', `${course.credits} 學分`],
+        ['📚 類型', { required: '必修', elective: '選修', general: '通識' }[course.type] || '未設定'],
+        ['📝 備註', course.note || '沒有備註']
+      ].forEach(([label, value]) => {
+        const item = document.createElement('div');
+        item.className = 'info-item';
+        const heading = document.createElement('b');
+        heading.textContent = label;
+        item.append(heading, document.createTextNode(` ${value}`));
+        details.appendChild(item);
+      });
+
+      document.getElementById('editCourseButton').onclick = () => editCourse(id);
+      document.getElementById('deleteCourseButton').onclick = () => deleteCourse(id);
+      document.getElementById('courseInfoModal').classList.add('active');
+    }
+
+    function editCourse(id) {
+      const course = courses.find(c => c.id === id);
+      if (!course) return;
+      editingCourseId = id;
+      document.getElementById('courseName').value = course.name;
+      document.getElementById('teacher').value = course.teacher;
+      document.getElementById('classroom').value = course.classroom;
+      document.getElementById('courseDay').value = course.day;
+      document.getElementById('startPeriod').value = course.startPeriod;
+      document.getElementById('endPeriod').value = course.endPeriod;
+      document.getElementById('startWeek').value = course.startWeek;
+      document.getElementById('endWeek').value = course.endWeek;
+      document.getElementById('credits').value = course.credits;
+      document.getElementById('courseType').value = course.type;
+      document.getElementById('courseNote').value = course.note;
+      closeModal('courseInfoModal');
+      document.getElementById('courseModalTitle').innerText = '✏️ 編輯課程';
+      document.getElementById('courseModal').classList.add('active');
+    }
+
+    function deleteCourse(id) {
+      if (!confirm('確定要刪除這門課嗎？')) return;
+      const updatedCourses = courses.filter(c => c.id !== id);
+      try {
+        localStorage.setItem(STORAGE_KEYS.courses, JSON.stringify(updatedCourses));
+      } catch (error) {
+        alert('刪除失敗，瀏覽器無法儲存變更，請稍後再試。');
+        return;
+      }
+      courses = updatedCourses;
+      closeModal('courseInfoModal');
+      renderSchedule();
+      updateCredits();
+      updateCountdown();
+    }
+
+    function updateCredits() {
+      let total = 0; let required = 0; let elective = 0; let general = 0;
+      courses.forEach(course => {
+        const credit = Number(course.credits) || 0;
+        total += credit;
+        if (course.type === 'required') required += credit;
+        if (course.type === 'elective') elective += credit;
+        if (course.type === 'general') general += credit;
+      });
+      document.getElementById('totalCredits').innerText = total;
+      document.getElementById('requiredCredits').innerText = required;
+      document.getElementById('electiveCredits').innerText = elective;
+      document.getElementById('generalCredits').innerText = general;
+      const progress = Number.isFinite(total) ? Math.min((total / 24) * 100, 100) : 0;
+      document.getElementById('creditProgress').style.width = `${progress}%`;
+    }
+
+    function openReminderModal() {
+      document.getElementById('reminderModal').classList.add('active');
+    }
+
+    function saveReminder() {
+      const name = document.getElementById('reminderName').value.trim();
+      const date = document.getElementById('reminderDate').value;
+      const type = document.getElementById('reminderType').value;
+      if (!name || !date) {
+        alert('請填寫名稱與日期！');
+        return;
+      }
+      reminders.push({ id: Date.now(), name, date, type });
+      try {
+        localStorage.setItem(STORAGE_KEYS.reminders, JSON.stringify(reminders));
+      } catch (error) {
+        reminders.pop();
+        alert('提醒儲存失敗，請稍後再試。');
+        return;
+      }
+      document.getElementById('reminderName').value = '';
+      document.getElementById('reminderDate').value = '';
+      closeModal('reminderModal');
+      renderReminders();
+    }
+
+    function renderReminders() {
+      const list = document.getElementById('reminderList');
+      list.innerHTML = '';
+      reminders.sort((a, b) => new Date(a.date) - new Date(b.date));
+      if (!reminders.length) {
+        list.innerHTML = '<p class="empty">目前沒有作業或考試 🎉</p>';
+        document.getElementById('nextReminder').innerText = '尚無提醒';
+        return;
+      }
+      reminders.forEach(reminder => {
+        const div = document.createElement('div');
+        div.className = 'reminder';
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const target = new Date(reminder.date); target.setHours(0, 0, 0, 0);
+        const diff = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+        let countdown;
+        if (diff < 0) countdown = '已過期';
+        else if (diff === 0) countdown = '就是今天！🔥';
+        else countdown = `距離還有 ${diff} 天`;
+
+        const title = document.createElement('strong');
+        title.textContent = `${reminder.type}｜${reminder.name}`;
+        const detail = document.createElement('small');
+        detail.textContent = `📅 ${reminder.date} · ${countdown}`;
+        const remove = document.createElement('button');
+        remove.className = 'danger';
+        remove.style.marginTop = '8px';
+        remove.style.padding = '6px 9px';
+        remove.textContent = '刪除';
+        remove.onclick = () => deleteReminder(reminder.id);
+        div.append(title, detail, document.createElement('br'), remove);
+        list.appendChild(div);
+      });
+      updateNextReminder();
+    }
+
+    function updateNextReminder() {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const upcoming = reminders.filter(r => new Date(r.date) >= today).sort((a, b) => new Date(a.date) - new Date(b.date));
+      const box = document.getElementById('nextReminder');
+      if (!upcoming.length) {
+        box.textContent = '最近沒有重要事項 🎉';
+        return;
+      }
+      const next = upcoming[0];
+      const target = new Date(next.date); target.setHours(0,0,0,0);
+      const diff = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+      box.replaceChildren();
+      const title = document.createElement('strong');
+      title.textContent = `${next.type}｜${next.name}`;
+      const date = document.createElement('p');
+      date.textContent = `📅 ${next.date}`;
+      const countdown = document.createElement('strong');
+      countdown.style.color = 'var(--primary)';
+      countdown.textContent = diff === 0 ? '🔥 就是今天！' : `⏳ 距離還有 ${diff} 天`;
+      box.append(title, date, countdown);
+    }
+
+    function deleteReminder(id) {
+      const updatedReminders = reminders.filter(reminder => reminder.id !== id);
+      try {
+        localStorage.setItem(STORAGE_KEYS.reminders, JSON.stringify(updatedReminders));
+      } catch (error) {
+        alert('刪除失敗，瀏覽器無法儲存變更，請稍後再試。');
+        return;
+      }
+      reminders = updatedReminders;
+      renderReminders();
+    }
+
+    function updateCountdown() {
+      const now = new Date();
+      const today = now.getDay();
+      const selectedWeek = Number(document.getElementById('weekSelect').value || 1);
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      let currentCourse = null;
+      let nextCourse = null;
+      let nextStart = Infinity;
+      courses.forEach(course => {
+        if (
+          Number(course.day) !== today ||
+          selectedWeek < Number(course.startWeek || 1) ||
+          selectedWeek > Number(course.endWeek || 18)
+        ) return;
+        const startTime = periodTimes[Number(course.startPeriod)];
+        const endTime = periodTimes[Number(course.endPeriod)];
+        if (!startTime || !endTime) return;
+        const [startHour, startMinute] = startTime[0].split(':').map(Number);
+        const [endHour, endMinute] = endTime[1].split(':').map(Number);
+        const startMinutes = startHour * 60 + startMinute;
+        const endMinutes = endHour * 60 + endMinute;
+        if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
+          currentCourse = { course, endMinutes };
+        }
+        if (startMinutes > currentMinutes && startMinutes < nextStart) {
+          nextStart = startMinutes;
+          nextCourse = course;
+        }
+      });
+      const title = document.getElementById('countdownTitle');
+      const courseText = document.getElementById('countdownCourse');
+      const timeText = document.getElementById('countdownTime');
+      if (currentCourse) {
+        const remaining = currentCourse.endMinutes - currentMinutes;
+        title.innerText = '🔴 正在上課';
+        courseText.innerText = `${currentCourse.course.name}｜${currentCourse.course.classroom || '教室未設定'}`;
+        timeText.innerText = `剩餘 ${remaining} 分鐘`;
+        return;
+      }
+      if (nextCourse) {
+        const remaining = nextStart - currentMinutes;
+        title.innerText = '🟢 下一堂';
+        courseText.innerText = `${nextCourse.name}｜${nextCourse.classroom || '教室未設定'}`;
+        timeText.innerText = `${remaining} 分鐘後開始`;
+        return;
+      }
+      title.innerText = '🎉 今天課程結束';
+      courseText.innerText = '可以去吃飯了！';
+      timeText.innerText = '自由時間';
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('active');
+    }
+
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.addEventListener('click', function (e) {
+        if (e.target === modal) modal.classList.remove('active');
+      });
+    });
+
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        document.querySelectorAll('.modal.active').forEach(modal => modal.classList.remove('active'));
+      }
+    });
+
+    const installButton = document.getElementById('installButton');
+    window.addEventListener('beforeinstallprompt', event => {
+      event.preventDefault();
+      installPrompt = event;
+      installButton.hidden = false;
+    });
+    installButton.addEventListener('click', async () => {
+      if (!installPrompt) return;
+      installPrompt.prompt();
+      await installPrompt.userChoice;
+      installPrompt = null;
+      installButton.hidden = true;
+    });
+    window.addEventListener('appinstalled', () => {
+      installPrompt = null;
+      installButton.hidden = true;
+    });
+
+    function resizeImageFile(file, maxWidth = 1200, quality = 0.78) {
+      return new Promise((resolve, reject) => {
+        if (!file || !file.type.startsWith('image/')) {
+          resolve('');
+          return;
+        }
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('無法讀取圖片'));
+        reader.onload = () => {
+          const img = new Image();
+          img.onerror = () => reject(new Error('圖片格式無法讀取'));
+          img.onload = () => {
+            const scale = Math.min(1, maxWidth / img.width);
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.round(img.width * scale);
+            canvas.height = Math.round(img.height * scale);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+          };
+          img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    const diaryPhotoInput = document.getElementById('diaryPhoto');
+    const themePhotoInput = document.getElementById('themePhoto');
+    if (diaryPhotoInput) {
+      diaryPhotoInput.addEventListener('change', async e => {
+        try { pendingDiaryPhoto = await resizeImageFile(e.target.files[0], 1000, 0.72); }
+        catch (error) { alert('照片讀取失敗，請換一張圖片試試。'); pendingDiaryPhoto = ''; }
+      });
+    }
+    if (themePhotoInput) {
+      themePhotoInput.addEventListener('change', async e => {
+        try {
+          pendingThemePhoto = await resizeImageFile(e.target.files[0], 1600, 0.78);
+          const preview = document.getElementById('themePreview');
+          if (pendingThemePhoto) preview.style.backgroundImage = `linear-gradient(transparent,rgba(0,0,0,.35)),url("${pendingThemePhoto}")`;
+        } catch (error) {
+          alert('照片讀取失敗，請換一張圖片試試。');
+          pendingThemePhoto = '';
+        }
+      });
+    }
+
+    function saveDiary() {
+      const date = document.getElementById('diaryDate').value || localDateString();
+      const text = document.getElementById('diaryText').value.trim();
+      if (!text && !pendingDiaryPhoto) {
+        alert('先寫點生活紀錄或選一張照片吧！');
+        return;
+      }
+      const entry = { id: Date.now(), date, text, photo: pendingDiaryPhoto };
+      diaryEntries.unshift(entry);
+      try {
+        localStorage.setItem(STORAGE_KEYS.diary, JSON.stringify(diaryEntries));
+      } catch (error) {
+        diaryEntries.shift();
+        alert('儲存空間可能已滿。請先刪除部分日記照片，或改用較小的照片。');
+        return;
+      }
+      document.getElementById('diaryText').value = '';
+      document.getElementById('diaryPhoto').value = '';
+      pendingDiaryPhoto = '';
+      renderDiary();
+    }
+
+    function renderDiary() {
+      const list = document.getElementById('diaryList');
+      if (!list) return;
+      list.innerHTML = '';
+      if (!diaryEntries.length) {
+        list.innerHTML = '<p class="empty">還沒有日記，從今天開始留下回憶吧 ☁️</p>';
+        return;
+      }
+      diaryEntries.forEach(entry => {
+        const card = document.createElement('article');
+        card.className = 'diary-entry';
+        const head = document.createElement('div');
+        head.className = 'diary-entry-head';
+        const date = document.createElement('strong');
+        date.textContent = `📅 ${entry.date}`;
+        const del = document.createElement('button');
+        del.className = 'danger';
+        del.textContent = '刪除';
+        del.onclick = () => deleteDiary(entry.id);
+        head.append(date, del);
+        card.appendChild(head);
+        if (entry.text) {
+          const body = document.createElement('div');
+          body.className = 'diary-entry-text';
+          body.textContent = entry.text;
+          card.appendChild(body);
+        }
+        if (entry.photo) {
+          const img = document.createElement('img');
+          img.className = 'diary-photo';
+          img.src = entry.photo;
+          img.alt = '日記照片';
+          card.appendChild(img);
+        }
+        list.appendChild(card);
+      });
+    }
+
+    function deleteDiary(id) {
+      if (!confirm('確定刪除這篇日記嗎？')) return;
+      diaryEntries = diaryEntries.filter(entry => entry.id !== id);
+      localStorage.setItem(STORAGE_KEYS.diary, JSON.stringify(diaryEntries));
+      renderDiary();
+    }
+
+    function selectMood(button) {
+      document.querySelectorAll('.cloud-choice').forEach(item => item.classList.remove('selected'));
+      button.classList.add('selected');
+      selectedMood = button.dataset.mood;
+    }
+
+    function saveMood() {
+      if (!selectedMood) {
+        alert('先選一朵代表今天心情的雲喔！');
+        return;
+      }
+      const selected = document.querySelector(`.cloud-choice[data-mood="${selectedMood}"]`);
+      const entry = {
+        id: Date.now(),
+        date: localDateString(),
+        mood: selectedMood,
+        cloud: selected.dataset.cloud,
+        note: document.getElementById('moodNote').value.trim()
+      };
+      moodEntries.unshift(entry);
+      try {
+        localStorage.setItem(STORAGE_KEYS.mood, JSON.stringify(moodEntries));
+      } catch (error) {
+        moodEntries.shift();
+        alert('儲存空間不足，無法保存心情紀錄。');
+        return;
+      }
+      document.getElementById('moodNote').value = '';
+      selectedMood = '';
+      document.querySelectorAll('.cloud-choice').forEach(item => item.classList.remove('selected'));
+      renderMoodHistory();
+      renderWeeklyMood();
+    }
+
+    function renderMoodHistory() {
+      const box = document.getElementById('moodHistory');
+      if (!box) return;
+      box.innerHTML = '';
+      if (!moodEntries.length) {
+        box.innerHTML = '<p class="empty">你的心情雲朵會出現在這裡。</p>';
+        return;
+      }
+      moodEntries.slice(0, 7).forEach(entry => {
+        const row = document.createElement('div');
+        row.className = 'mood-entry';
+        const cloud = document.createElement('div');
+        cloud.className = 'mood-cloud';
+        cloud.textContent = entry.cloud;
+        const content = document.createElement('div'); content.style.flex = '1';
+        const title = document.createElement('strong');
+        title.textContent = `${entry.date}｜${entry.mood}`;
+        const note = document.createElement('div');
+        note.textContent = entry.note || '今天沒有留下文字，也沒關係。';
+        note.style.color = '#777'; note.style.fontSize = '13px';
+        content.append(title, note);
+        const del = document.createElement('button');
+        del.className = 'secondary'; del.textContent = '×'; del.title = '刪除心情紀錄'; del.onclick = () => deleteMood(entry.id);
+        row.append(cloud, content, del);
+        box.appendChild(row);
+      });
+    }
+
+    function renderWeeklyMood() {
+      const calendar = document.getElementById('weeklyMoodCalendar');
+      const summary = document.getElementById('weeklyMoodSummary');
+      if (!calendar || !summary) return;
+
+      calendar.innerHTML = '';
+      const today = new Date();
+      const monday = new Date(today);
+      const dayOffset = (today.getDay() + 6) % 7;
+      monday.setDate(today.getDate() - dayOffset);
+      monday.setHours(0, 0, 0, 0);
+      const weekdays = ['一', '二', '三', '四', '五', '六', '日'];
+      const weekRecords = [];
+
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(monday);
+        date.setDate(monday.getDate() + i);
+        const dateKey = localDateString(date);
+        const record = moodEntries.find(item => item.date === dateKey);
+        const isToday = dateKey === localDateString();
+        const box = document.createElement('div');
+        box.className = 'weekly-mood-day' + (isToday ? ' today' : '');
+
+        const dayName = document.createElement('div');
+        dayName.className = 'day-name';
+        dayName.textContent = `星期${weekdays[i]}${isToday ? ' ✨' : ''}`;
+
+        const cloud = document.createElement('div');
+        cloud.className = 'day-cloud';
+        cloud.textContent = record ? record.cloud : '☁️';
+
+        const mood = document.createElement('div');
+        mood.className = 'day-mood';
+        mood.textContent = record ? record.mood : '尚未記錄';
+
+        box.append(dayName, cloud, mood);
+        calendar.appendChild(box);
+
+        if (record) weekRecords.push(record);
+      }
+
+      if (weekRecords.length === 0) {
+        summary.textContent = '這週還沒有心情紀錄，記得留一朵雲給自己 ☁️';
+        return;
+      }
+
+      const counts = {};
+      weekRecords.forEach(record => {
+        counts[record.mood] = (counts[record.mood] || 0) + 1;
+      });
+      const mostCommon = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+      summary.textContent = `這週記錄了 ${weekRecords.length} 天的心情 ☁️ 最常出現的心情是「${mostCommon[0]}」！`;
+    }
+
+    function deleteMood(id) {
+      moodEntries = moodEntries.filter(entry => entry.id !== id);
+      localStorage.setItem(STORAGE_KEYS.mood, JSON.stringify(moodEntries));
+      renderMoodHistory();
+      renderWeeklyMood();
+    }
+
+    function applyThemePhoto() {
+      if (!pendingThemePhoto) {
+        alert('請先選擇一張主題照片！');
+        return;
+      }
+      try {
+        localStorage.setItem(STORAGE_KEYS.theme, pendingThemePhoto);
+        setThemePhoto(pendingThemePhoto);
+      } catch (error) {
+        alert('照片太大，瀏覽器儲存空間不足。請換一張較小的照片再試一次。');
+      }
+    }
+
+    function setThemePhoto(dataUrl) {
+      document.body.style.backgroundImage = `linear-gradient(rgba(245,247,251,0.38), rgba(245,247,251,0.62)), url("${dataUrl}")`;
+      document.body.style.backgroundSize = 'cover';
+      document.body.style.backgroundPosition = 'center';
+      document.body.style.backgroundAttachment = 'fixed';
+      const preview = document.getElementById('themePreview');
+      if (preview) preview.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.08), rgba(0,0,0,0.20)), url("${dataUrl}")`;
+    }
+
+    function resetTheme() {
+      localStorage.removeItem(STORAGE_KEYS.theme);
+      document.body.style.backgroundImage = '';
+      document.body.style.backgroundSize = '';
+      document.body.style.backgroundPosition = '';
+      document.body.style.backgroundAttachment = '';
+      pendingThemePhoto = '';
+      const themeInput = document.getElementById('themePhoto');
+      if (themeInput) themeInput.value = '';
+      const preview = document.getElementById('themePreview');
+      if (preview) preview.style.backgroundImage = '';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      createOptions();
+      updateToday();
+      const weekSelect = document.getElementById('weekSelect');
+      weekSelect.addEventListener('change', () => {
+        renderSchedule();
+        updateCountdown();
+      });
+      renderSchedule();
+      renderReminders();
+      updateCredits();
+      updateCountdown();
+      document.getElementById('diaryDate').value = localDateString();
+      document.getElementById('reminderDate').min = localDateString();
+      renderDiary();
+      renderMoodHistory();
+      renderWeeklyMood();
+      const savedTheme = localStorage.getItem(STORAGE_KEYS.theme);
+      if (savedTheme) setThemePhoto(savedTheme);
+      if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+        navigator.serviceWorker.register('./sw.js').catch(error => {
+          console.warn('無法啟用離線快取', error);
+        });
+      }
+      setInterval(updateCountdown, 1000);
+    });
+  </script>
+</body>
+</html>
