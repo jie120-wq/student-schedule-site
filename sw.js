@@ -1,4 +1,4 @@
-const CACHE_NAME = 'student-schedule-v3';
+const CACHE_NAME = 'student-schedule-v4';
 const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './app-icon.svg'];
 
 self.addEventListener('install', event => {
@@ -23,6 +23,17 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const request = event.request;
   if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
+
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).catch(async error => {
+        const fallback = await caches.match('./index.html');
+        if (fallback) return fallback;
+        throw error;
+      })
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(request).then(cached => {
