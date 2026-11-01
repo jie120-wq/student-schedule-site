@@ -207,8 +207,9 @@
       .layout { grid-template-columns:minmax(0, 1fr); }
       .header { padding:20px 24px; }
       .header h1 { font-size:22px; }
-      .main-nav { order:3; width:100%; overflow-x:auto; }
+      .main-nav { order:3; width:100%; overflow:visible; flex-wrap:wrap; }
       .main-nav a { white-space:nowrap; }
+      .main-nav .cloud-account { flex-basis:100%; }
       .life-grid { grid-template-columns:1fr; }
       .cloud-options { grid-template-columns:repeat(3, minmax(0,1fr)); }
     }
