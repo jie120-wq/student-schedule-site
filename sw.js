@@ -1,4 +1,4 @@
-const CACHE_NAME = 'student-schedule-v7';
+const CACHE_NAME = 'student-schedule-v8';
 const APP_SHELL = [
   './',
   './index.html',
@@ -6,9 +6,7 @@ const APP_SHELL = [
   './apple-touch-icon.png?v=20261101',
   './icon-192-v2.png',
   './icon-512-v2.png',
-  './icon-512-maskable-v2.png',
-  './cloud-sync.js',
-  './supabase-config.js'
+  './icon-512-maskable-v2.png'
 ];
 
 self.addEventListener('install', event => {

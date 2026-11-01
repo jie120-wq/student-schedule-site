@@ -50,16 +50,6 @@
     .main-nav { display:flex; gap:8px; align-items:center; }
     .main-nav a { color:white; text-decoration:none; padding:9px 13px; border-radius:10px; font-size:14px; transition:background .2s; }
     .main-nav a:hover, .main-nav a:focus-visible { background:rgba(255,255,255,.18); outline:none; }
-    .cloud-account { display:flex; flex-wrap:wrap; align-items:center; gap:8px; max-width:100%; }
-    .cloud-account button { background:rgba(255,255,255,.16); color:white; border:1px solid rgba(255,255,255,.35); }
-    .cloud-account button[hidden] { display:none; }
-    .cloud-account button:disabled { opacity:.55; cursor:not-allowed; }
-    .cloud-account-message, .cloud-status { font-size:12px; }
-    .cloud-status-panel { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px 18px; padding:10px 24px; background:#fff; border-bottom:1px solid var(--line); color:var(--ink); }
-    .cloud-status[data-state="error"], .cloud-safety[data-state="incomplete"] { color:#b42318; }
-    .cloud-status[data-state="syncing"], .cloud-safety[data-state="pending"] { color:#9a6700; }
-    .cloud-status[data-state="synced"], .cloud-safety[data-state="complete"] { color:#14845c; }
-    .cloud-status[data-state="local"], .cloud-safety[data-state="local"] { color:var(--muted); }
     .container { max-width: 1460px; margin: 28px auto; padding: 0 24px; }
     .welcome { display:flex; justify-content:space-between; align-items:center; gap:18px; margin: 0 0 18px; }
     .welcome h2 { margin:0; font-size:22px; }
@@ -206,7 +196,6 @@
       .header h1 { font-size:22px; }
       .main-nav { order:3; width:100%; overflow:visible; flex-wrap:wrap; }
       .main-nav a { white-space:nowrap; }
-      .main-nav .cloud-account { flex-basis:100%; }
       .life-grid { grid-template-columns:1fr; }
       .cloud-options { grid-template-columns:repeat(3, minmax(0,1fr)); }
     }
@@ -249,17 +238,8 @@
       <a href="#reminders">📝 待辦提醒</a>
       <a href="#budget">💰 記帳</a>
       <a href="#life">☁️ 生活紀錄</a>
-      <div class="cloud-account">
-        <span id="cloudAccountMessage" class="cloud-account-message">登入後啟用雲端同步</span>
-        <button id="googleSignIn" type="button" onclick="cloudSync.signInWithGoogle()">Google 登入／同步</button>
-        <button id="googleSignOut" type="button" onclick="cloudSync.signOut()" hidden>登出</button>
-      </div>
     </nav>
   </header>
-  <div class="cloud-status-panel" aria-live="polite">
-    <span id="cloudSyncStatus" class="cloud-status" data-state="local">⚪ 正在檢查雲端同步設定</span>
-    <span id="cloudSafetyStatus" class="cloud-status cloud-safety" data-state="local">⚪ 等待安全確認狀態</span>
-  </div>
 
   <div class="container">
     <div class="welcome">
@@ -336,7 +316,7 @@
         <div class="card-title">
           <div>
             <h2 id="budgetTitle">💰 我的記帳本</h2>
-            <p class="small-note">記錄日常收支；登入後會同步到你的私人雲端帳戶。</p>
+            <p class="small-note">記錄日常收支；資料儲存在目前使用的裝置。</p>
           </div>
           <label for="budgetMonth">統計月份
             <input id="budgetMonth" type="month" />
@@ -397,14 +377,14 @@
       <div class="life-grid">
         <div class="life-card">
           <h2>📔 我的生活日記</h2>
-          <p class="small-note">登入後日記、心情與照片會同步到你的私人雲端帳戶。</p>
+          <p class="small-note">日記、心情與照片資料儲存在目前使用的裝置。</p>
           <label for="diaryDate">日期</label>
           <input id="diaryDate" type="date" />
           <label for="diaryText">今天想記錄什麼？</label>
           <textarea id="diaryText" placeholder="今天發生了什麼有趣、感動或值得記住的事？"></textarea>
           <label for="diaryPhoto">放一張照片（選填）</label>
           <input id="diaryPhoto" type="file" accept="image/*" />
-          <p class="small-note">日記照片會縮小並以私人方式儲存在雲端，每張上限 5 MB。</p>
+          <p class="small-note">日記照片會縮小並儲存在此裝置，每張上限 5 MB。</p>
           <button id="diarySubmit" class="primary" onclick="saveDiary()">💾 儲存日記</button>
           <div id="diaryList" class="diary-list"></div>
         </div>
@@ -568,8 +548,6 @@
     </div>
   </div>
 
-  <script src="./supabase-config.js"></script>
-  <script src="./cloud-sync.js"></script>
   <script>
     const STORAGE_KEYS = {
       courses: 'studentCourses',
@@ -1563,29 +1541,8 @@
       renderDiary();
       renderMoodHistory();
       renderWeeklyMood();
-      window.applyCloudSnapshot = function (snapshot) {
-        courses = snapshot.courses;
-        reminders = snapshot.reminders;
-        transactions = snapshot.transactions;
-        diaryEntries = snapshot.diary;
-        moodEntries = snapshot.mood;
-        localStorage.setItem(STORAGE_KEYS.courses, JSON.stringify(courses));
-        localStorage.setItem(STORAGE_KEYS.reminders, JSON.stringify(reminders));
-        localStorage.setItem(STORAGE_KEYS.transactions, JSON.stringify(transactions));
-        localStorage.setItem(STORAGE_KEYS.diary, JSON.stringify(diaryEntries));
-        localStorage.setItem(STORAGE_KEYS.mood, JSON.stringify(moodEntries));
-        renderSchedule();
-        renderReminders();
-        updateCredits();
-        updateCountdown();
-        renderBudget();
-        renderDiary();
-        renderMoodHistory();
-        renderWeeklyMood();
-      };
       const savedTheme = localStorage.getItem(STORAGE_KEYS.theme);
       if (savedTheme) setThemePhoto(savedTheme);
-      window.cloudSync.start();
       if ('serviceWorker' in navigator && location.protocol !== 'file:') {
         navigator.serviceWorker.register('./sw.js').catch(error => {
           console.warn('無法啟用離線快取', error);
