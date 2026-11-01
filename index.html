@@ -7,9 +7,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="我的大學課表" />
-  <link rel="manifest" href="./manifest.webmanifest" />
-  <link rel="icon" href="./app-icon.svg" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="./app-icon.svg" />
+  <link rel="manifest" href="./manifest.webmanifest?v=20261101" />
+  <link rel="icon" href="./icon-192-v2.png" type="image/png" sizes="192x192" />
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=20261101" sizes="180x180" />
   <title>大學生課表管理系統</title>
   <style>
     * { box-sizing: border-box; }
@@ -53,6 +53,16 @@
     .install-button { background:rgba(255,255,255,.16); color:white; border:1px solid rgba(255,255,255,.35); white-space:nowrap; }
     .install-button:hover { background:rgba(255,255,255,.26); }
     .install-button[hidden] { display:none; }
+    .cloud-account { display:flex; flex-wrap:wrap; align-items:center; gap:8px; max-width:100%; }
+    .cloud-account button { background:rgba(255,255,255,.16); color:white; border:1px solid rgba(255,255,255,.35); }
+    .cloud-account button[hidden] { display:none; }
+    .cloud-account button:disabled { opacity:.55; cursor:not-allowed; }
+    .cloud-account-message, .cloud-status { font-size:12px; }
+    .cloud-status-panel { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px 18px; padding:10px 24px; background:#fff; border-bottom:1px solid var(--line); color:var(--ink); }
+    .cloud-status[data-state="error"], .cloud-safety[data-state="incomplete"] { color:#b42318; }
+    .cloud-status[data-state="syncing"], .cloud-safety[data-state="pending"] { color:#9a6700; }
+    .cloud-status[data-state="synced"], .cloud-safety[data-state="complete"] { color:#14845c; }
+    .cloud-status[data-state="local"], .cloud-safety[data-state="local"] { color:var(--muted); }
     .container { max-width: 1460px; margin: 28px auto; padding: 0 24px; }
     .welcome { display:flex; justify-content:space-between; align-items:center; gap:18px; margin: 0 0 18px; }
     .welcome h2 { margin:0; font-size:22px; }
@@ -128,6 +138,7 @@
     .budget-entry-amount.income { color:#14845c; }
     .budget-entry-amount.expense { color:#d75d5d; }
     .budget-entry-actions button { padding:7px 10px; }
+    .budget-entry-actions .edit-entry { background:#eef0f7; color:#444; }
     .budget-toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
     .budget-filters { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
     .budget-filters label { display:flex; align-items:center; gap:6px; color:var(--muted); font-size:14px; }
@@ -170,6 +181,8 @@
     .diary-list { display:grid; gap:12px; margin-top:18px; }
     .diary-entry { border:1px solid #e8eaf2; background:#fbfcff; border-radius:14px; padding:14px; }
     .diary-entry-head { display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:8px; }
+    .diary-entry-actions { display:flex; gap:6px; }
+    .diary-entry-actions button { padding:7px 10px; }
     .diary-entry-text { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.6; }
     .diary-photo { display:block; max-width:100%; max-height:260px; object-fit:cover; border-radius:12px; margin-top:10px; }
     .mood-entry { display:flex; align-items:center; gap:12px; border-bottom:1px solid #edf0f5; padding:12px 0; }
@@ -238,9 +251,18 @@
       <a href="#reminders">📝 待辦提醒</a>
       <a href="#budget">💰 記帳</a>
       <a href="#life">☁️ 生活紀錄</a>
-      <button id="installButton" class="install-button" type="button" hidden>⬇️ 安裝 App</button>
+      <button id="installButton" class="install-button" type="button">⬇️ 安裝／下載 App</button>
+      <div class="cloud-account">
+        <span id="cloudAccountMessage" class="cloud-account-message">登入後啟用雲端同步</span>
+        <button id="googleSignIn" type="button" onclick="cloudSync.signInWithGoogle()">Google 登入／同步</button>
+        <button id="googleSignOut" type="button" onclick="cloudSync.signOut()" hidden>登出</button>
+      </div>
     </nav>
   </header>
+  <div class="cloud-status-panel" aria-live="polite">
+    <span id="cloudSyncStatus" class="cloud-status" data-state="local">⚪ 正在檢查雲端同步設定</span>
+    <span id="cloudSafetyStatus" class="cloud-status cloud-safety" data-state="local">⚪ 等待安全確認狀態</span>
+  </div>
 
   <div class="container">
     <div class="welcome">
@@ -317,7 +339,7 @@
         <div class="card-title">
           <div>
             <h2 id="budgetTitle">💰 我的記帳本</h2>
-            <p class="small-note">記錄日常收支，掌握每月財務狀況。資料只儲存在這個瀏覽器。</p>
+            <p class="small-note">記錄日常收支；登入後會同步到你的私人雲端帳戶。</p>
           </div>
           <label for="budgetMonth">統計月份
             <input id="budgetMonth" type="month" />
@@ -328,7 +350,7 @@
           <div class="budget-stat"><span>本月支出</span><strong id="budgetExpense" class="budget-expense">$0</strong></div>
           <div class="budget-stat"><span>本月結餘</span><strong id="budgetBalance" class="budget-balance">$0</strong></div>
         </div>
-        <h3>新增一筆收支</h3>
+        <h3 id="budgetFormTitle">新增一筆收支</h3>
         <form id="budgetForm" class="budget-form">
           <div class="form-group">
             <label for="transactionType">收支類型</label>
@@ -353,7 +375,7 @@
             <label for="transactionNote">備註（選填）</label>
             <input id="transactionNote" type="text" maxlength="80" placeholder="例如：午餐、家教薪水" />
           </div>
-          <button class="primary" type="submit">＋ 新增紀錄</button>
+          <button id="transactionSubmit" class="primary" type="submit">＋ 新增紀錄</button>
         </form>
       </div>
       <div class="card">
@@ -378,15 +400,15 @@
       <div class="life-grid">
         <div class="life-card">
           <h2>📔 我的生活日記</h2>
-          <p class="small-note">記下今天發生的事，也可以放上喜歡的照片。內容會保存在這個瀏覽器中。</p>
+          <p class="small-note">登入後日記、心情與照片會同步到你的私人雲端帳戶。</p>
           <label for="diaryDate">日期</label>
           <input id="diaryDate" type="date" />
           <label for="diaryText">今天想記錄什麼？</label>
           <textarea id="diaryText" placeholder="今天發生了什麼有趣、感動或值得記住的事？"></textarea>
           <label for="diaryPhoto">放一張照片（選填）</label>
           <input id="diaryPhoto" type="file" accept="image/*" />
-          <p class="small-note">照片會縮小後儲存在瀏覽器；請避免上傳太多大尺寸照片。</p>
-          <button class="primary" onclick="saveDiary()">💾 儲存日記</button>
+          <p class="small-note">日記照片會縮小並以私人方式儲存在雲端，每張上限 5 MB。</p>
+          <button id="diarySubmit" class="primary" onclick="saveDiary()">💾 儲存日記</button>
           <div id="diaryList" class="diary-list"></div>
         </div>
 
@@ -549,6 +571,8 @@
     </div>
   </div>
 
+  <script src="./supabase-config.js"></script>
+  <script src="./cloud-sync.js"></script>
   <script>
     const STORAGE_KEYS = {
       courses: 'studentCourses',
@@ -579,6 +603,8 @@
     let selectedMood = '';
     let pendingDiaryPhoto = '';
     let pendingThemePhoto = '';
+    let editingTransactionId = null;
+    let editingDiaryId = null;
     let installPrompt = null;
 
     const colors = ['#667eea', '#00b894', '#e17055', '#6c5ce7', '#0984e3', '#e84393', '#00cec9', '#fd9644', '#eb3b5a', '#20bf6b'];
@@ -602,6 +628,10 @@
       const m = String(date.getMonth() + 1).padStart(2, '0');
       const d = String(date.getDate()).padStart(2, '0');
       return `${y}-${m}-${d}`;
+    }
+
+    function createRecordId() {
+      return globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     }
 
     function createOptions() {
@@ -744,7 +774,7 @@
       }
 
       const course = {
-        id: editingCourseId || Date.now(),
+        id: editingCourseId || createRecordId(),
         name,
         teacher: document.getElementById('teacher').value,
         classroom: document.getElementById('classroom').value,
@@ -873,7 +903,7 @@
         alert('請填寫名稱與日期！');
         return;
       }
-      reminders.push({ id: Date.now(), name, date, type });
+      reminders.push({ id: createRecordId(), name, date, type });
       try {
         localStorage.setItem(STORAGE_KEYS.reminders, JSON.stringify(reminders));
       } catch (error) {
@@ -935,6 +965,30 @@
       });
     }
 
+    function resetTransactionForm() {
+      editingTransactionId = null;
+      document.getElementById('budgetForm').reset();
+      document.getElementById('transactionDate').value = localDateString();
+      document.getElementById('budgetFormTitle').textContent = '新增一筆收支';
+      document.getElementById('transactionSubmit').textContent = '＋ 新增紀錄';
+      populateTransactionCategories();
+    }
+
+    function editTransaction(id) {
+      const transaction = transactions.find(item => String(item.id) === String(id));
+      if (!transaction) return;
+      editingTransactionId = transaction.id;
+      document.getElementById('transactionType').value = transaction.type;
+      populateTransactionCategories();
+      document.getElementById('transactionCategory').value = transaction.category;
+      document.getElementById('transactionAmount').value = transaction.amount;
+      document.getElementById('transactionDate').value = transaction.date;
+      document.getElementById('transactionNote').value = transaction.note || '';
+      document.getElementById('budgetFormTitle').textContent = '編輯收支紀錄';
+      document.getElementById('transactionSubmit').textContent = '儲存變更';
+      document.getElementById('budgetForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
     function saveTransaction(event) {
       event.preventDefault();
       const type = document.getElementById('transactionType').value;
@@ -947,9 +1001,22 @@
         return;
       }
 
-      const id = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      const transaction = { id, type, category, amount, date, note };
-      const updatedTransactions = [transaction, ...transactions];
+      const existing = transactions.find(item => String(item.id) === String(editingTransactionId));
+      const id = existing?.id || createRecordId();
+      const transaction = {
+        ...existing,
+        id,
+        type,
+        category,
+        amount,
+        date,
+        note,
+        created_at: existing?.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      const updatedTransactions = existing
+        ? transactions.map(item => String(item.id) === String(id) ? transaction : item)
+        : [transaction, ...transactions];
       try {
         localStorage.setItem(STORAGE_KEYS.transactions, JSON.stringify(updatedTransactions));
       } catch (error) {
@@ -958,8 +1025,7 @@
       }
 
       transactions = updatedTransactions;
-      document.getElementById('transactionAmount').value = '';
-      document.getElementById('transactionNote').value = '';
+      resetTransactionForm();
       renderBudget();
     }
 
@@ -999,7 +1065,7 @@
       const visibleTransactions = monthTransactions
         .filter(transaction => filter === 'all' || transaction.type === filter)
         .slice()
-        .sort((a, b) => b.date.localeCompare(a.date) || Number(b.id) - Number(a.id));
+        .sort((a, b) => b.date.localeCompare(a.date) || String(b.id).localeCompare(String(a.id)));
       if (!visibleTransactions.length) {
         const empty = document.createElement('p');
         empty.className = 'empty';
@@ -1033,7 +1099,13 @@
         remove.textContent = '刪除';
         remove.setAttribute('aria-label', `刪除 ${transaction.date} ${transaction.category} ${currencyFormatter.format(transaction.amount)} 紀錄`);
         remove.addEventListener('click', () => deleteTransaction(transaction.id));
-        actions.append(amount, remove);
+        const edit = document.createElement('button');
+        edit.className = 'edit-entry';
+        edit.type = 'button';
+        edit.textContent = '編輯';
+        edit.setAttribute('aria-label', `編輯 ${transaction.date} ${transaction.category} 紀錄`);
+        edit.addEventListener('click', () => editTransaction(transaction.id));
+        actions.append(amount, edit, remove);
 
         entry.append(main, actions);
         list.appendChild(entry);
@@ -1049,6 +1121,7 @@
         return;
       }
       transactions = updatedTransactions;
+      if (String(editingTransactionId) === String(id)) resetTransactionForm();
       renderBudget();
     }
 
@@ -1157,18 +1230,39 @@
     window.addEventListener('beforeinstallprompt', event => {
       event.preventDefault();
       installPrompt = event;
-      installButton.hidden = false;
+      installButton.disabled = false;
+      installButton.textContent = '⬇️ 安裝 App';
     });
     installButton.addEventListener('click', async () => {
-      if (!installPrompt) return;
-      installPrompt.prompt();
-      await installPrompt.userChoice;
-      installPrompt = null;
-      installButton.hidden = true;
+      if (installPrompt) {
+        await installPrompt.prompt();
+        await installPrompt.userChoice;
+        installPrompt = null;
+        installButton.textContent = '⬇️ 安裝／下載 App';
+        return;
+      }
+
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+        window.navigator.standalone === true;
+      if (isStandalone) {
+        alert('App 已安裝在這台裝置上，可以從主畫面開啟。');
+        return;
+      }
+
+      const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      if (location.protocol === 'file:') {
+        alert(`請先用 Safari 或 Chrome 開啟網站，再安裝 App：\nhttps://jie120-wq.github.io/student-schedule-site/`);
+      } else if (isIos) {
+        alert('請用 Safari 開啟此網站，點選「分享」→「加入主畫面」，即可將固定品牌圖示加入 iPhone 主畫面。');
+      } else {
+        alert('請使用 Chrome、Edge 或其他支援 PWA 的瀏覽器開啟此網站，再從瀏覽器選單選擇「安裝 App」或「加入主畫面」。');
+      }
     });
     window.addEventListener('appinstalled', () => {
       installPrompt = null;
-      installButton.hidden = true;
+      installButton.textContent = '✅ App 已安裝';
+      installButton.disabled = true;
     });
 
     function resizeImageFile(file, maxWidth = 1200, quality = 0.78) {
@@ -1218,25 +1312,61 @@
       });
     }
 
+    function resetDiaryForm() {
+      editingDiaryId = null;
+      pendingDiaryPhoto = '';
+      document.getElementById('diaryDate').value = localDateString();
+      document.getElementById('diaryText').value = '';
+      document.getElementById('diaryPhoto').value = '';
+      document.getElementById('diarySubmit').textContent = '💾 儲存日記';
+    }
+
+    function editDiary(id) {
+      const entry = diaryEntries.find(item => String(item.id) === String(id));
+      if (!entry) return;
+      editingDiaryId = entry.id;
+      pendingDiaryPhoto = entry.photo || '';
+      document.getElementById('diaryDate').value = entry.date;
+      document.getElementById('diaryText').value = entry.text || '';
+      document.getElementById('diarySubmit').textContent = '儲存日記變更';
+      document.getElementById('diaryText').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
     function saveDiary() {
       const date = document.getElementById('diaryDate').value || localDateString();
       const text = document.getElementById('diaryText').value.trim();
-      if (!text && !pendingDiaryPhoto) {
+      const existing = diaryEntries.find(item => String(item.id) === String(editingDiaryId));
+      const replacingPhoto = document.getElementById('diaryPhoto').files.length > 0;
+      const photo = replacingPhoto
+        ? pendingDiaryPhoto
+        : (pendingDiaryPhoto || existing?.photo || '');
+      if (!text && !photo) {
         alert('先寫點生活紀錄或選一張照片吧！');
         return;
       }
-      const entry = { id: Date.now(), date, text, photo: pendingDiaryPhoto };
-      diaryEntries.unshift(entry);
+      const timestamp = new Date().toISOString();
+      const entry = {
+        ...existing,
+        id: existing?.id || createRecordId(),
+        date,
+        text,
+        photo,
+        created_at: existing?.created_at || timestamp,
+        updated_at: timestamp
+      };
+      if (replacingPhoto) delete entry.photo_path;
+      diaryEntries = existing
+        ? diaryEntries.map(item => String(item.id) === String(entry.id) ? entry : item)
+        : [entry, ...diaryEntries];
       try {
         localStorage.setItem(STORAGE_KEYS.diary, JSON.stringify(diaryEntries));
       } catch (error) {
-        diaryEntries.shift();
+        if (existing) diaryEntries = diaryEntries.map(item => String(item.id) === String(entry.id) ? existing : item);
+        else diaryEntries = diaryEntries.filter(item => String(item.id) !== String(entry.id));
         alert('儲存空間可能已滿。請先刪除部分日記照片，或改用較小的照片。');
         return;
       }
-      document.getElementById('diaryText').value = '';
-      document.getElementById('diaryPhoto').value = '';
-      pendingDiaryPhoto = '';
+      resetDiaryForm();
       renderDiary();
     }
 
@@ -1255,11 +1385,18 @@
         head.className = 'diary-entry-head';
         const date = document.createElement('strong');
         date.textContent = `📅 ${entry.date}`;
+        const actions = document.createElement('div');
+        actions.className = 'diary-entry-actions';
+        const edit = document.createElement('button');
+        edit.className = 'secondary';
+        edit.textContent = '編輯';
+        edit.onclick = () => editDiary(entry.id);
         const del = document.createElement('button');
         del.className = 'danger';
         del.textContent = '刪除';
         del.onclick = () => deleteDiary(entry.id);
-        head.append(date, del);
+        actions.append(edit, del);
+        head.append(date, actions);
         card.appendChild(head);
         if (entry.text) {
           const body = document.createElement('div');
@@ -1282,6 +1419,7 @@
       if (!confirm('確定刪除這篇日記嗎？')) return;
       diaryEntries = diaryEntries.filter(entry => entry.id !== id);
       localStorage.setItem(STORAGE_KEYS.diary, JSON.stringify(diaryEntries));
+      if (String(editingDiaryId) === String(id)) resetDiaryForm();
       renderDiary();
     }
 
@@ -1298,7 +1436,7 @@
       }
       const selected = document.querySelector(`.cloud-choice[data-mood="${selectedMood}"]`);
       const entry = {
-        id: Date.now(),
+        id: createRecordId(),
         date: localDateString(),
         mood: selectedMood,
         cloud: selected.dataset.cloud,
@@ -1468,8 +1606,29 @@
       renderDiary();
       renderMoodHistory();
       renderWeeklyMood();
+      window.applyCloudSnapshot = function (snapshot) {
+        courses = snapshot.courses;
+        reminders = snapshot.reminders;
+        transactions = snapshot.transactions;
+        diaryEntries = snapshot.diary;
+        moodEntries = snapshot.mood;
+        localStorage.setItem(STORAGE_KEYS.courses, JSON.stringify(courses));
+        localStorage.setItem(STORAGE_KEYS.reminders, JSON.stringify(reminders));
+        localStorage.setItem(STORAGE_KEYS.transactions, JSON.stringify(transactions));
+        localStorage.setItem(STORAGE_KEYS.diary, JSON.stringify(diaryEntries));
+        localStorage.setItem(STORAGE_KEYS.mood, JSON.stringify(moodEntries));
+        renderSchedule();
+        renderReminders();
+        updateCredits();
+        updateCountdown();
+        renderBudget();
+        renderDiary();
+        renderMoodHistory();
+        renderWeeklyMood();
+      };
       const savedTheme = localStorage.getItem(STORAGE_KEYS.theme);
       if (savedTheme) setThemePhoto(savedTheme);
+      window.cloudSync.start();
       if ('serviceWorker' in navigator && location.protocol !== 'file:') {
         navigator.serviceWorker.register('./sw.js').catch(error => {
           console.warn('無法啟用離線快取', error);

@@ -1,5 +1,15 @@
-const CACHE_NAME = 'student-schedule-v4';
-const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './app-icon.svg'];
+const CACHE_NAME = 'student-schedule-v6';
+const APP_SHELL = [
+  './',
+  './index.html',
+  './manifest.webmanifest?v=20261101',
+  './apple-touch-icon.png?v=20261101',
+  './icon-192-v2.png',
+  './icon-512-v2.png',
+  './icon-512-maskable-v2.png',
+  './cloud-sync.js',
+  './supabase-config.js'
+];
 
 self.addEventListener('install', event => {
   event.waitUntil(
