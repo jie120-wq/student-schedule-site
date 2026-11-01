@@ -50,9 +50,6 @@
     .main-nav { display:flex; gap:8px; align-items:center; }
     .main-nav a { color:white; text-decoration:none; padding:9px 13px; border-radius:10px; font-size:14px; transition:background .2s; }
     .main-nav a:hover, .main-nav a:focus-visible { background:rgba(255,255,255,.18); outline:none; }
-    .install-button { background:rgba(255,255,255,.16); color:white; border:1px solid rgba(255,255,255,.35); white-space:nowrap; }
-    .install-button:hover { background:rgba(255,255,255,.26); }
-    .install-button[hidden] { display:none; }
     .cloud-account { display:flex; flex-wrap:wrap; align-items:center; gap:8px; max-width:100%; }
     .cloud-account button { background:rgba(255,255,255,.16); color:white; border:1px solid rgba(255,255,255,.35); }
     .cloud-account button[hidden] { display:none; }
@@ -252,7 +249,6 @@
       <a href="#reminders">📝 待辦提醒</a>
       <a href="#budget">💰 記帳</a>
       <a href="#life">☁️ 生活紀錄</a>
-      <button id="installButton" class="install-button" type="button">⬇️ 安裝／下載 App</button>
       <div class="cloud-account">
         <span id="cloudAccountMessage" class="cloud-account-message">登入後啟用雲端同步</span>
         <button id="googleSignIn" type="button" onclick="cloudSync.signInWithGoogle()">Google 登入／同步</button>
@@ -606,7 +602,6 @@
     let pendingThemePhoto = '';
     let editingTransactionId = null;
     let editingDiaryId = null;
-    let installPrompt = null;
 
     const colors = ['#667eea', '#00b894', '#e17055', '#6c5ce7', '#0984e3', '#e84393', '#00cec9', '#fd9644', '#eb3b5a', '#20bf6b'];
     const periodTimes = {
@@ -1225,45 +1220,6 @@
       if (event.key === 'Escape') {
         document.querySelectorAll('.modal.active').forEach(modal => modal.classList.remove('active'));
       }
-    });
-
-    const installButton = document.getElementById('installButton');
-    window.addEventListener('beforeinstallprompt', event => {
-      event.preventDefault();
-      installPrompt = event;
-      installButton.disabled = false;
-      installButton.textContent = '⬇️ 安裝 App';
-    });
-    installButton.addEventListener('click', async () => {
-      if (installPrompt) {
-        await installPrompt.prompt();
-        await installPrompt.userChoice;
-        installPrompt = null;
-        installButton.textContent = '⬇️ 安裝／下載 App';
-        return;
-      }
-
-      const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
-        window.navigator.standalone === true;
-      if (isStandalone) {
-        alert('App 已安裝在這台裝置上，可以從主畫面開啟。');
-        return;
-      }
-
-      const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      if (location.protocol === 'file:') {
-        alert(`請先用 Safari 或 Chrome 開啟網站，再安裝 App：\nhttps://jie120-wq.github.io/student-schedule-site/`);
-      } else if (isIos) {
-        alert('請用 Safari 開啟此網站，點選「分享」→「加入主畫面」，即可將固定品牌圖示加入 iPhone 主畫面。');
-      } else {
-        alert('請使用 Chrome、Edge 或其他支援 PWA 的瀏覽器開啟此網站，再從瀏覽器選單選擇「安裝 App」或「加入主畫面」。');
-      }
-    });
-    window.addEventListener('appinstalled', () => {
-      installPrompt = null;
-      installButton.textContent = '✅ App 已安裝';
-      installButton.disabled = true;
     });
 
     function resizeImageFile(file, maxWidth = 1200, quality = 0.78) {
